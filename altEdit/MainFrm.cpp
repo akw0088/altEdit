@@ -20,6 +20,7 @@ IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_WM_SIZE()
+	ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
 
@@ -93,4 +94,9 @@ void CMainFrame::OnSize(UINT nType, int cx, int cy)
 
 		GetActiveDocument()->UpdateAllViews(NULL);
 	}
+}
+
+BOOL CMainFrame::OnEraseBkgnd(CDC* pDC)
+{
+	return TRUE;
 }

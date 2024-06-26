@@ -20,11 +20,10 @@ public:
 
 	public:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-	protected:
+protected:
 	virtual BOOL OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext);
-	void OnSize(UINT nType, int cx, int cy);
-	bool init;
-
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 
 public:
 	virtual ~CMainFrame();
@@ -37,6 +36,7 @@ public:
 protected:
 	CSplitterWnd m_wndSplitter;
 	CToolBar toolbar;
+	bool init;
 
 
 	DECLARE_MESSAGE_MAP()
