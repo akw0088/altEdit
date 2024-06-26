@@ -63,7 +63,7 @@ void CViewFront::OnDraw(CDC* pDC)
         draw_grid(pDC);
     }
 
-    int nCount = pDoc->GetLineCount();
+    int nCount = pDoc->GetBrushCount();
     if (nCount)
     {
         for (int i = 0; i < nCount; i++)
@@ -122,7 +122,7 @@ void CViewFront::OnLButtonDown(UINT nFlags, CPoint point)
     }
 
     Document* pDoc = GetDocument();
-    int nCount = pDoc->GetLineCount();
+    int nCount = pDoc->GetBrushCount();
     if (nCount)
     {
         for (int i = 0; i < nCount; i++)

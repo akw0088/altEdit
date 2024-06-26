@@ -14,39 +14,40 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-IMPLEMENT_DYNCREATE(CViewSide, CScrollView)
+IMPLEMENT_DYNCREATE(CViewTop, CScrollView)
 
-BEGIN_MESSAGE_MAP(CViewSide, CScrollView)
+BEGIN_MESSAGE_MAP(CViewTop, CScrollView)
 	ON_WM_SETCURSOR()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_MOUSEMOVE()
 	ON_WM_LBUTTONUP()
 END_MESSAGE_MAP()
 
-CViewSide::CViewSide()
+
+
+CViewTop::CViewTop()
 {
 	m_hCursor = AfxGetApp ()->LoadStandardCursor (IDC_CROSS);
 
     selected = -1;
 }
 
-CViewSide::~CViewSide()
+CViewTop::~CViewTop()
 {
 }
 
-BOOL CViewSide::PreCreateWindow(CREATESTRUCT& cs)
+BOOL CViewTop::PreCreateWindow(CREATESTRUCT& cs)
 {
 	return CScrollView::PreCreateWindow(cs);
 }
 
-
-void CViewSide::OnDraw(CDC* pDC)
+void CViewTop::OnDraw(CDC* pDC)
 {
     Document* pDoc = GetDocument();
-    ASSERT_VALID(pDoc);
+	ASSERT_VALID(pDoc);
 
 
-    CString view_name("Side");
+    CString view_name("Top");
     RECT rect;
 
     rect.top = GRID_SIZE;
@@ -57,7 +58,7 @@ void CViewSide::OnDraw(CDC* pDC)
 
     pDC->DrawText(view_name, &rect, 0);
 
-    if (pDoc->IsGridVisible() && selected == -1)
+    if (pDoc->IsGridVisible () && selected == -1)
     {
         draw_grid(pDC);
     }
@@ -67,45 +68,45 @@ void CViewSide::OnDraw(CDC* pDC)
     {
         for (int i = 0; i < nCount; i++)
         {
-            pDoc->GetBrush(i)->Draw(pDC, 2);
+            pDoc->GetBrush(i)->Draw(pDC, 0);
         }
     }
 
 
 }
 
-void CViewSide::OnInitialUpdate()
+void CViewTop::OnInitialUpdate()
 {
 	CScrollView::OnInitialUpdate();
     SetScrollSizes(MM_TEXT, CSize(0, 0));
-
 }
 
 #ifdef _DEBUG
-void CViewSide::AssertValid() const
+void CViewTop::AssertValid() const
 {
-	CScrollView::AssertValid();
+    CView::AssertValid();
 }
 
-void CViewSide::Dump(CDumpContext& dc) const
+void CViewTop::Dump(CDumpContext& dc) const
 {
-	CScrollView::Dump(dc);
+    CView::Dump(dc);
 }
 
-Document* CViewSide::GetDocument()
+Document* CViewTop::GetDocument()
 {
 	ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(Document)));
-	return (Document*)m_pDocument;
+	return (Document *)m_pDocument;
 }
 #endif
 
-BOOL CViewSide::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message)
+
+BOOL CViewTop::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message)
 {
     ::SetCursor (m_hCursor);
     return TRUE;	
 }
 
-void CViewSide::OnLButtonDown(UINT nFlags, CPoint point)
+void CViewTop::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	CScrollView::OnLButtonDown(nFlags, point);
 
@@ -120,8 +121,9 @@ void CViewSide::OnLButtonDown(UINT nFlags, CPoint point)
         pos.y = ((pos.y + 0) / GRID_SIZE) * GRID_SIZE;
     }
 
+
     Document* pDoc = GetDocument();
-    int nCount = pDoc->GetLineCount();
+    int nCount = pDoc->GetBrushCount();
     if (nCount)
     {
         for (int i = 0; i < nCount; i++)
@@ -130,8 +132,8 @@ void CViewSide::OnLButtonDown(UINT nFlags, CPoint point)
             point_t p2 = pDoc->GetBrush(i)->p2;
 
             if (
-                ((pos.x <= p1.z && pos.x >= p2.z) || (pos.x >= p1.z && pos.x <= p2.z)) &&
-                ((pos.y <= p1.y && pos.y >= p2.y) || (pos.y >= p1.y && pos.y <= p2.y))
+                (( pos.x <= p1.x && pos.x >= p2.x ) || (pos.x >= p1.x && pos.x <= p2.x)) &&
+                (( pos.y <= p1.z && pos.y >= p2.z ) || (pos.y >= p1.z && pos.y <= p2.z))
                 )
             {
                 pDoc->GetBrush(i)->orig_color = pDoc->GetBrush(i)->color;
@@ -139,9 +141,6 @@ void CViewSide::OnLButtonDown(UINT nFlags, CPoint point)
                 selected = i;
                 p1_orig = pDoc->GetBrush(i)->p1;
                 p2_orig = pDoc->GetBrush(i)->p2;
-//                pDoc->UpdateAllViews(NULL);
-
-
                 break;
             }
         }
@@ -154,12 +153,12 @@ void CViewSide::OnLButtonDown(UINT nFlags, CPoint point)
     SetCapture ();
 }
 
-void CViewSide::OnMouseMove(UINT nFlags, CPoint point)
+void CViewTop::OnMouseMove(UINT nFlags, CPoint point)
 {
 	CScrollView::OnMouseMove(nFlags, point);
 
-    if (GetCapture () == this)
-    {
+    if (GetCapture() == this)
+	{
 		CPoint pos = point;
 		CClientDC dc (this);
 		OnPrepareDC (&dc);
@@ -186,10 +185,10 @@ void CViewSide::OnMouseMove(UINT nFlags, CPoint point)
                 m_mouseEnd.x = pos.x;
                 m_mouseEnd.y = pos.y;
                 Document* pDoc = GetDocument();
-                pDoc->GetBrush(selected)->p1.z = p1_orig.z + (m_mouseEnd.x - m_mouseStart.x);
-                pDoc->GetBrush(selected)->p1.y = p1_orig.y + (m_mouseEnd.y - m_mouseStart.y);
-                pDoc->GetBrush(selected)->p2.z = p2_orig.z + (m_mouseEnd.x - m_mouseStart.x);
-                pDoc->GetBrush(selected)->p2.y = p2_orig.y + (m_mouseEnd.y - m_mouseStart.y);
+                pDoc->GetBrush(selected)->p1.x = p1_orig.x + (m_mouseEnd.x - m_mouseStart.x);
+                pDoc->GetBrush(selected)->p1.z = p1_orig.z + (m_mouseEnd.y - m_mouseStart.y);
+                pDoc->GetBrush(selected)->p2.x = p2_orig.x + (m_mouseEnd.x - m_mouseStart.x);
+                pDoc->GetBrush(selected)->p2.z = p2_orig.z + (m_mouseEnd.y - m_mouseStart.y);
                 pDoc->UpdateAllViews(NULL);
             }
         }
@@ -197,7 +196,7 @@ void CViewSide::OnMouseMove(UINT nFlags, CPoint point)
     }
 }
 
-void CViewSide::OnLButtonUp(UINT nFlags, CPoint point)
+void CViewTop::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	CScrollView::OnLButtonUp(nFlags, point);
 
@@ -226,23 +225,23 @@ void CViewSide::OnLButtonUp(UINT nFlags, CPoint point)
             point_t from;
             point_t to;
 
-            from.z = m_mouseStart.x;
-            from.x = DEFAULT_FROM;
-            from.y = m_mouseStart.y;
+            from.x = m_mouseStart.x;
+            from.y = DEFAULT_FROM;
+            from.z = m_mouseStart.y;
 
-            to.z = m_mouseEnd.x;
-            to.x = DEFAULT_TO;
-            to.y = m_mouseEnd.y;
+            to.x = m_mouseEnd.x;
+            to.y = DEFAULT_TO;
+            to.z = m_mouseEnd.y;
 
             Brush* pLine = pDoc->AddBrush(from, to);
         }
         else
         {
             Document* pDoc = GetDocument();
-            pDoc->GetBrush(selected)->p1.z = p1_orig.z + (m_mouseEnd.x - m_mouseStart.x);
-            pDoc->GetBrush(selected)->p1.y = p1_orig.y + (m_mouseEnd.y - m_mouseStart.y);
-            pDoc->GetBrush(selected)->p2.z = p2_orig.z + (m_mouseEnd.x - m_mouseStart.x);
-            pDoc->GetBrush(selected)->p2.y = p2_orig.y + (m_mouseEnd.y - m_mouseStart.y);
+            pDoc->GetBrush(selected)->p1.x = p1_orig.x + (m_mouseEnd.x - m_mouseStart.x);
+            pDoc->GetBrush(selected)->p1.z = p1_orig.z + (m_mouseEnd.y - m_mouseStart.y);
+            pDoc->GetBrush(selected)->p2.x = p2_orig.x + (m_mouseEnd.x - m_mouseStart.x);
+            pDoc->GetBrush(selected)->p2.z = p2_orig.z + (m_mouseEnd.y - m_mouseStart.y);
             pDoc->GetBrush(selected)->color = pDoc->GetBrush(selected)->orig_color;
             pDoc->UpdateAllViews(NULL);
         }
@@ -251,7 +250,7 @@ void CViewSide::OnLButtonUp(UINT nFlags, CPoint point)
 
 }
 
-void CViewSide::InvertLine(CDC *pDC, CPoint from, CPoint to)
+void CViewTop::InvertLine(CDC *pDC, POINT from, POINT to)
 {
     RECT rect;
 
@@ -267,7 +266,7 @@ void CViewSide::InvertLine(CDC *pDC, CPoint from, CPoint to)
     pDC->SetROP2 (nOldMode);
 }
 
-void CViewSide::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
+void CViewTop::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 {
     if (lHint == 0x7C)
 	{
@@ -275,7 +274,7 @@ void CViewSide::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 		ASSERT (pBrush->IsKindOf (RUNTIME_CLASS (Brush)));
 		CClientDC dc (this);
 		OnPrepareDC (&dc);
-        pBrush->Draw (&dc, 2);
+        pBrush->Draw (&dc, 0);
 		return;
 	}	
 	CScrollView::OnUpdate (pSender, lHint, pHint);

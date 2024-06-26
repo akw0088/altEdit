@@ -128,7 +128,7 @@ void Document::DeleteContents()
     if (nCount)
     {
         for (int i = 0; i < nCount; i++)
-            delete m_arrBrush[i];
+            delete m_arrBrushes[i];
         m_arrBrushes.RemoveAll ();
     }
     CDocument::DeleteContents();
