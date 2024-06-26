@@ -1,13 +1,4 @@
-// MainFrm.h : interface of the CMainFrame class
-//
-/////////////////////////////////////////////////////////////////////////////
-
-#if !defined(AFX_MAINFRM_H__1260AFC9_9CAC_11D2_8E53_006008A82731__INCLUDED_)
-#define AFX_MAINFRM_H__1260AFC9_9CAC_11D2_8E53_006008A82731__INCLUDED_
-
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 
 class CMainFrame : public CFrameWnd
 {
@@ -42,5 +33,3 @@ protected:
 	DECLARE_MESSAGE_MAP()
 };
 
-
-#endif
