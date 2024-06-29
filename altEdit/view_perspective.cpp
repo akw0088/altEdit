@@ -1,12 +1,9 @@
 #include "stdafx.h"
-#include "Brush.h"
-#include "WinApp.h"
-#include "Document.h"
-
 #include "view_perspective.h"
-#include "view_top.h"
-#include "view_front.h"
-#include "view_side.h"
+
+#define GLEW_STATIC
+#include <GL/glew.h>
+#include <GL/wglew.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -15,204 +12,191 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 
-IMPLEMENT_DYNCREATE(CViewPerspective, CScrollView)
-
-BEGIN_MESSAGE_MAP(CViewPerspective, CScrollView)
-	ON_WM_SETCURSOR()
-	ON_WM_LBUTTONDOWN()
-	ON_WM_MOUSEMOVE()
-	ON_WM_LBUTTONUP()
-END_MESSAGE_MAP()
-
+IMPLEMENT_DYNCREATE(CViewPerspective, CView)
 
 CViewPerspective::CViewPerspective()
 {
-	m_hCursor = AfxGetApp ()->LoadStandardCursor (IDC_CROSS);
 }
 
 CViewPerspective::~CViewPerspective()
 {
 }
 
-BOOL CViewPerspective::PreCreateWindow(CREATESTRUCT& cs)
+BOOL CViewPerspective::SetupPixelFormat()
 {
-	return CScrollView::PreCreateWindow(cs);
+	static PIXELFORMATDESCRIPTOR pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),    // size of this pfd
+		1,                                // version number
+		PFD_DRAW_TO_WINDOW |              // support window
+		PFD_SUPPORT_OPENGL |              // support OpenGL
+		PFD_GENERIC_ACCELERATED |
+		PFD_DOUBLEBUFFER,                 // double buffered
+		PFD_TYPE_RGBA,                    // RGBA type
+		32,                               // 24-bit color depth
+		0, 0, 0, 0, 0, 0,                 // color bits ignored
+		0,                                // no alpha buffer
+		0,                                // shift bit ignored
+		0,                                // no accumulation buffer
+		0, 0, 0, 0,                       // accumulation bits ignored
+		24,                               // 16-bit z-buffer
+		8,                                // no stencil buffer
+		0,                                // no auxiliary buffer
+		PFD_MAIN_PLANE,                   // main layer
+		0,                                // reserved
+		0, 0, 0                           // layer masks ignored
+	};
+
+	int m_nPixelFormat = ::ChoosePixelFormat(m_pDC->GetSafeHdc(), &pfd);
+
+	if (m_nPixelFormat == 0)
+		return FALSE;
+
+	return ::SetPixelFormat(m_pDC->GetSafeHdc(), m_nPixelFormat, &pfd);
 }
+
+BOOL CViewPerspective::InitOpenGL()
+{
+	m_pDC = new CClientDC(this);
+
+	if (m_pDC == NULL)
+		return FALSE;
+
+	if (!SetupPixelFormat())
+		return FALSE;
+
+	hglrc_legacy = ::wglCreateContext(m_pDC->GetSafeHdc());
+
+	if (hglrc_legacy == 0)
+		return FALSE;
+
+	if (::wglMakeCurrent(m_pDC->GetSafeHdc(), hglrc_legacy) == FALSE)
+		return FALSE;
+	glewInit();
+
+	if (::wglewIsSupported("WGL_ARB_create_context") == TRUE)
+	{
+		const int context[] =
+		{
+			// using 3.1 instead of 4.4 so we can keep legacy matrix operations
+			WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+			WGL_CONTEXT_MINOR_VERSION_ARB, 1,
+			//				WGL_CONTEXT_FLAGS_ARB,
+			//				WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB | WGL_CONTEXT_DEBUG_BIT_ARB,
+			//				WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		};
+
+		const int pixelformat[] =
+		{
+			WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+			WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+			WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+			WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+			WGL_COLOR_BITS_ARB, 32,
+			WGL_DEPTH_BITS_ARB, 24,
+			WGL_STENCIL_BITS_ARB, 8,
+			0,
+		};
+
+		int format;
+		unsigned int num_formats;
+
+		::wglChoosePixelFormatARB(m_pDC->GetSafeHdc(), (int *)pixelformat, NULL, 1, &format, &num_formats);
+		hglrc = ::wglCreateContextAttribsARB(m_pDC->GetSafeHdc(), 0, context);
+		if (hglrc != NULL)
+		{
+			wglMakeCurrent(NULL, NULL);
+			wglDeleteContext(hglrc_legacy);
+			wglMakeCurrent(m_pDC->GetSafeHdc(), hglrc);
+		}
+		else
+		{
+			MessageBox(TEXT("Graphics Driver does not support OpenGL 4.4, update driver and/or GPU"), TEXT("Fatal Error"), 0);
+			hglrc = hglrc_legacy;
+		}
+	}
+	else
+	{
+		//opengl 2.0
+		hglrc = hglrc_legacy;
+	}
+
+
+	glClearColor(0.0f, 0.0f, 0.25f, 0.0f);
+	glClearDepth(1.0f);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_2D);
+	glLineWidth(2.0f);
+	glPointSize(3.0f);
+
+	return TRUE;
+}
+
+
+BEGIN_MESSAGE_MAP(CViewPerspective, CView)
+	ON_WM_CREATE()
+	ON_WM_DESTROY()
+	ON_WM_ERASEBKGND()
+END_MESSAGE_MAP()
 
 void CViewPerspective::OnDraw(CDC* pDC)
 {
-    Document* pDoc = GetDocument();
-    ASSERT_VALID(pDoc);
-
-
-    CString view_name("Perspective");
-    RECT rect;
-
-    rect.top = GRID_SIZE;
-    rect.left = GRID_SIZE;
-    rect.right = GRID_SIZE * 20;
-    rect.bottom = GRID_SIZE * 20;
-    pDC->SetBkColor(RGB(255, 255, 255));
-
-    pDC->DrawText(view_name, &rect, 0);
-
-    if (pDoc->IsGridVisible())
-    {
-//        draw_grid(pDC);
-    }
-
-
-    int nCount = pDoc->GetBrushCount();
-    if (nCount)
-    {
-        for (int i = 0; i < nCount; i++)
-        {
-            pDoc->GetBrush(i)->Draw(pDC, 3);
-        }
-    }
-
-
+	SetContext();
+	glClear(GL_COLOR_BUFFER_BIT);
+	SwapGLBuffers();
 }
-void CViewPerspective::OnInitialUpdate()
-{
-	CScrollView::OnInitialUpdate();
-//    SetScrollSizes(MM_TEXT, CSize(GRID_WIDTH, GRID_HEIGHT));
-    SetScrollSizes(MM_TEXT, CSize(0, 0));
-}
-
 
 #ifdef _DEBUG
 void CViewPerspective::AssertValid() const
 {
-	CScrollView::AssertValid();
+	CView::AssertValid();
 }
 
 void CViewPerspective::Dump(CDumpContext& dc) const
 {
-	CScrollView::Dump(dc);
-}
-
-Document* CViewPerspective::GetDocument()
-{
-	ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(Document)));
-	return (Document*)m_pDocument;
+	CView::Dump(dc);
 }
 #endif
 
-BOOL CViewPerspective::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message)
+
+int CViewPerspective::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-    ::SetCursor (m_hCursor);
-    return TRUE;	
+	if (CView::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	if (!InitOpenGL())
+	{
+		MessageBox(TEXT("Error setting up OpenGL!"), TEXT("Init Error!"),
+			MB_OK | MB_ICONERROR);
+		return -1;
+	}
+
+	return 0;
 }
 
-void CViewPerspective::OnLButtonDown(UINT nFlags, CPoint point)
+void CViewPerspective::OnDestroy()
 {
-	CScrollView::OnLButtonDown(nFlags, point);
+	CView::OnDestroy();
 
-	CPoint pos = point;
-    CClientDC dc (this);
-    OnPrepareDC (&dc);
-    dc.DPtoLP (&pos);
-
-    if (GetDocument ()->IsGridVisible ())
-    {
-        pos.x = ((pos.x + GRID_OFFSET) / GRID_SIZE) * GRID_SIZE;
-        pos.y = ((pos.y + GRID_OFFSET) / GRID_SIZE) * GRID_SIZE;
-    }
-
-
-
-    m_ptFrom.x = pos.x;
-    m_ptFrom.y = pos.y;
-    m_ptFrom.z = DEFAULT_FROM;
-
-    m_ptTo.x = pos.x;
-    m_ptTo.y = pos.y;
-    m_ptTo.z = DEFAULT_TO;
-
-    SetCapture ();
+	wglMakeCurrent(0, 0);
+	wglDeleteContext(hglrc);
+	if (m_pDC)
+	{
+		delete m_pDC;
+	}
+	m_pDC = NULL;
 }
 
-void CViewPerspective::OnMouseMove(UINT nFlags, CPoint point)
+BOOL CViewPerspective::OnEraseBkgnd(CDC* pDC)
 {
-	CScrollView::OnMouseMove(nFlags, point);
-
-    if (GetCapture () == this)
-    {
-		CPoint pos = point;
-		CClientDC dc (this);
-		OnPrepareDC (&dc);
-		dc.DPtoLP (&pos);
-
-        if (GetDocument ()->IsGridVisible ())
-        {
-            pos.x = ((pos.x + GRID_OFFSET) / GRID_SIZE) * GRID_SIZE;
-            pos.y = ((pos.y + GRID_OFFSET) / GRID_SIZE) * GRID_SIZE;
-        }
-
-        if (CPoint(m_ptTo.x, m_ptTo.y) != pos)
-        {
-            InvertLine (&dc, CPoint(m_ptFrom.x, m_ptFrom.y), CPoint(m_ptTo.x, m_ptTo.y));
-            InvertLine (&dc, CPoint(m_ptFrom.x, m_ptFrom.y), CPoint(pos.x, pos.y));
-            m_ptTo.x = pos.x;
-            m_ptTo.y = pos.y;
-            m_ptTo.z = DEFAULT_TO;
-        }
-    }
+	return TRUE;
 }
 
-void CViewPerspective::OnLButtonUp(UINT nFlags, CPoint point)
+BOOL CViewPerspective::PreCreateWindow(CREATESTRUCT& cs)
 {
-	CScrollView::OnLButtonUp(nFlags, point);
+	cs.lpszClass = ::AfxRegisterWndClass(CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | CS_OWNDC,
+		::LoadCursor(NULL, IDC_ARROW), NULL, NULL);
+	cs.style |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
-    if (GetCapture () == this)
-    {
-        ::ReleaseCapture ();
-
-		CPoint pos = point;
-		CClientDC dc (this);
-		OnPrepareDC (&dc);
-		dc.DPtoLP (&pos);
-
-        if (GetDocument ()->IsGridVisible ())
-        {
-            pos.x = ((pos.x + GRID_OFFSET) / GRID_SIZE) * GRID_SIZE;
-            pos.y = ((pos.y + GRID_OFFSET) / GRID_SIZE) * GRID_SIZE;
-        }
-
-        InvertLine (&dc, CPoint(m_ptFrom.x, m_ptFrom.y), CPoint(m_ptTo.x, m_ptTo.y));
-
-        Document* pDoc = GetDocument ();
-        Brush* pLine = pDoc->AddBrush (m_ptFrom, m_ptTo);
-    }	
-}
-
-void CViewPerspective::InvertLine(CDC *pDC, POINT from, POINT to)
-{
-    RECT rect;
-
-    rect.left = from.x;
-    rect.right = to.x;
-
-    rect.top = from.y;
-    rect.bottom = to.y;
-
-    int nOldMode = pDC->SetROP2 (R2_NOT);
-    pDC->MoveTo (from);
-    pDC->Rectangle(&rect);
-    pDC->SetROP2 (nOldMode);
-}
-
-void CViewPerspective::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
-{
-    if (lHint == 0x7C)
-    {
-        Brush* pBrush = (Brush *) pHint;
-		ASSERT (pBrush->IsKindOf (RUNTIME_CLASS (Brush)));
-		CClientDC dc (this);
-		OnPrepareDC (&dc);
-        pBrush->Draw (&dc, 3);
-		return;
-	}	
-	CScrollView::OnUpdate (pSender, lHint, pHint);
+	return CView::PreCreateWindow(cs);
 }

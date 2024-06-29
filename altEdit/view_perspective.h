@@ -1,47 +1,43 @@
 #pragma once
 
+#include "Document.h"
 
-class Document;
-
-#include "types.h"
-
-class CViewPerspective : public CScrollView
+class CViewPerspective : public CView
 {
 protected:
 	CViewPerspective();
 	DECLARE_DYNCREATE(CViewPerspective)
+public:
+
+protected:
+	HGLRC hglrc_legacy;
+	HGLRC hglrc;
+	CDC* m_pDC;
 
 public:
-	Document* GetDocument();
+	BOOL SetupPixelFormat();
+	BOOL InitOpenGL();
 
+	void SetContext() { wglMakeCurrent(m_pDC->GetSafeHdc(), hglrc); }
+	void SwapGLBuffers() { SwapBuffers(m_pDC->GetSafeHdc()); }
+
+
+protected:
 	virtual void OnDraw(CDC* pDC);
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-protected:
-	virtual void OnInitialUpdate();
-	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
 
-public:
+protected:
 	virtual ~CViewPerspective();
+
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 
 protected:
-	void InvertLine (CDC* pDC, POINT from, POINT to);
-	point_t m_ptFrom;
-	point_t m_ptTo;
-	HCURSOR m_hCursor;
-
-	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
-	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
-
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnDestroy();
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	DECLARE_MESSAGE_MAP()
 };
 
-#ifndef _DEBUG
-inline Document* CViewPerspective::GetDocument()
-   { return (Document*)m_pDocument; }
-#endif
