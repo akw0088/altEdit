@@ -45,6 +45,8 @@ protected:
 	virtual void OnDraw(CDC* pDC);
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 	int load_shader(char *vertex_file, char *geometry_file, char *fragment_file);
+	void reload_shader();
+	void destroy_shader();
 	int prelink();
 
 protected:
@@ -60,6 +62,7 @@ protected:
 	afx_msg void OnDestroy();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnMButtonDown(UINT nFlags, CPoint point);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR TimerVal);
 

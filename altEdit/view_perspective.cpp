@@ -213,6 +213,39 @@ int CViewPerspective::load_shader(char *vertex_file, char *geometry_file, char *
 	return 0;
 }
 
+void CViewPerspective::reload_shader()
+{
+	destroy_shader();
+	load_shader("shader.vs", NULL, "shader.fs");
+
+}
+
+
+void CViewPerspective::destroy_shader()
+{
+	if (vertex_src)
+	{
+		delete[] vertex_src;
+	}
+	if (geometry_src)
+	{
+		delete[] geometry_src;
+	}
+	if (fragment_src)
+	{
+		delete[] fragment_src;
+	}
+
+
+	vertex_src = NULL;
+	geometry_src = NULL;
+	fragment_src = NULL;
+
+	glDeleteProgram(program_handle);
+	glDeleteShader(vertex_handle);
+	glDeleteShader(fragment_handle);
+}
+
 
 BOOL CViewPerspective::InitOpenGL()
 {
@@ -334,6 +367,7 @@ BEGIN_MESSAGE_MAP(CViewPerspective, CView)
 	ON_WM_SIZE()
 	ON_WM_TIMER()
 	ON_WM_MOUSEMOVE()
+	ON_WM_MBUTTONDOWN()
 END_MESSAGE_MAP()
 
 void CViewPerspective::OnDraw(CDC* pDC)
@@ -439,4 +473,10 @@ BOOL CViewPerspective::PreCreateWindow(CREATESTRUCT& cs)
 	cs.style |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
 	return CView::PreCreateWindow(cs);
+}
+
+
+void CViewPerspective::OnMButtonDown(UINT nFlags, CPoint point)
+{
+	reload_shader();
 }
