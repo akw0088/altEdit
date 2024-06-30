@@ -30,7 +30,7 @@ float sdSphere( vec3 p, float s )
 float GetDist(vec3 p)
 {
 	vec4 s = vec4(0, 1, 5, 1);
-	vec3 b = vec3(0.75, 0.75, 1);
+	vec3 b = vec3(0.75, 0.75, 0.75);
 
 //	float sphereDist = length(p-s.xyz)-s.w;
 	float sphereDist = sdSphere(p-s.xyz, s.w);
@@ -83,7 +83,7 @@ vec3 GetNormal(vec3 p)
 
 float GetLight(vec3 p)
 {
-	vec3 lightPos = vec3(0,5,6);
+	vec3 lightPos = vec3(0,5,3);
 	lightPos.xz += vec2(sin(iTime), cos(iTime)) * 2.0;
 	vec3 l = normalize(lightPos-p);
 	vec3 n = GetNormal(p);
