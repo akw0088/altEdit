@@ -10,16 +10,45 @@ out vec4 fColor;
 #define MAX_DIST 100.0
 #define SURF_DIST 0.01
 
+
+float sdBox( vec3 p, vec3 b )
+{
+  vec3 q = abs(p) - b;
+  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+float sdPlane( vec3 p )
+{
+	return p.y;
+}
+
+float sdSphere( vec3 p, float s )
+{
+    return length(p)-s;
+}
+
 float GetDist(vec3 p)
 {
-	vec4 s = vec4(0, 1, 6, 1);
+	vec4 s = vec4(0, 1, 5, 1);
+	vec3 b = vec3(0.75, 0.75, 1);
 
-	float sphereDist = length(p-s.xyz)-s.w;
+//	float sphereDist = length(p-s.xyz)-s.w;
+	float sphereDist = sdSphere(p-s.xyz, s.w);
+	float boxDist = sdBox(p-s.xyz, b);
 	float planeDist = p.y;
 
-	float d = min(sphereDist, planeDist);
+	float d = min(boxDist, planeDist);
 	return d;
 }
+
+
+
+
+
+
+
+
+
 
 float RayMarch(vec3 ro, vec3 rd)
 {
