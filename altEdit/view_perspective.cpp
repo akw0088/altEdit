@@ -16,6 +16,7 @@ IMPLEMENT_DYNCREATE(CViewPerspective, CView)
 
 CViewPerspective::CViewPerspective()
 {
+	time = 0.0f;
 }
 
 CViewPerspective::~CViewPerspective()
@@ -55,9 +56,170 @@ BOOL CViewPerspective::SetupPixelFormat()
 	return ::SetPixelFormat(m_pDC->GetSafeHdc(), m_nPixelFormat, &pfd);
 }
 
+
+int CViewPerspective::load_shader(char *vertex_file, char *geometry_file, char *fragment_file)
+{
+	FILE		*fLog;
+	int			success;
+	int			max_attrib = 0;
+	int			size = 0;
+
+	fLog = fopen("infolog.txt", "a");
+	fprintf(fLog, "OpenGL Version %s\n", glGetString(GL_VERSION));
+	fprintf(fLog, "OpenGL Renderer %s\n", glGetString(GL_RENDERER));
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &max_attrib);
+	fprintf(fLog, "Max vertex attribs %d\n", max_attrib);
+
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &size);
+	fprintf(fLog, "Max texture size %dx%d\n", size, size);
+
+
+	if (vertex_file)
+	{
+		vertex_src = get_file(vertex_file, NULL);
+		if (vertex_src == NULL)
+		{
+			fprintf(fLog, "Unable to load vertex shader %s\n", vertex_file);
+			fclose(fLog);
+			return -1;
+		}
+		else
+		{
+			fprintf(fLog, "Loaded vertex shader %s\n", vertex_file);
+		}
+
+
+		vertex_handle = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(vertex_handle, 1, &vertex_src, NULL);
+		glCompileShader(vertex_handle);
+		glGetShaderiv(vertex_handle, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			int		info_size;
+			char	*info_log;
+
+			glGetShaderiv(vertex_handle, GL_INFO_LOG_LENGTH, &info_size);
+			info_log = new char[info_size];
+
+			glGetShaderInfoLog(vertex_handle, info_size, NULL, info_log);
+			fprintf(fLog, "Error compiling: %s", info_log);
+			fclose(fLog);
+			delete[] info_log;
+			return -1;
+		}
+		delete[] vertex_src;
+		vertex_src = NULL;
+	}
+
+	if (geometry_file)
+	{
+		geometry_src = get_file(geometry_file, NULL);
+		if (geometry_src == NULL)
+		{
+			fprintf(fLog, "Unable to load geometry shader %s\n", geometry_file);
+			fclose(fLog);
+			return -1;
+		}
+		else
+		{
+			fprintf(fLog, "Loaded geometry shader %s\n", geometry_file);
+		}
+
+		geometry_handle = glCreateShader(GL_GEOMETRY_SHADER);
+		glShaderSource(geometry_handle, 1, &geometry_src, NULL);
+		glCompileShader(geometry_handle);
+		glGetShaderiv(geometry_handle, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			int		info_size;
+			char	*info_log;
+
+			glGetShaderiv(geometry_handle, GL_INFO_LOG_LENGTH, &info_size);
+			info_log = new char[info_size];
+
+			glGetShaderInfoLog(geometry_handle, info_size, NULL, info_log);
+			fprintf(fLog, "Error compiling: %s", info_log);
+			fclose(fLog);
+			delete[] info_log;
+			return -1;
+		}
+		delete[] geometry_src;
+		geometry_src = NULL;
+	}
+
+	if (fragment_file)
+	{
+		fragment_src = get_file(fragment_file, NULL);
+		if (fragment_src == NULL)
+		{
+			fprintf(fLog, "Unable to load fragment shader %s\n", fragment_file);
+			fclose(fLog);
+			return -1;
+		}
+		else
+		{
+			fprintf(fLog, "Loaded fragment shader %s\n", fragment_file);
+		}
+
+		fragment_handle = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(fragment_handle, 1, &fragment_src, NULL);
+		glCompileShader(fragment_handle);
+		glGetShaderiv(fragment_handle, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			int		info_size;
+			char	*info_log;
+
+			glGetShaderiv(fragment_handle, GL_INFO_LOG_LENGTH, &info_size);
+			info_log = new char[info_size];
+
+			glGetShaderInfoLog(fragment_handle, info_size, NULL, info_log);
+			fprintf(fLog, "Error compiling: %s", info_log);
+			fclose(fLog);
+			delete[] info_log;
+			return -1;
+		}
+		delete[] fragment_src;
+		fragment_src = NULL;
+	}
+
+	program_handle = glCreateProgram();
+	if (vertex_file)
+		glAttachShader(program_handle, vertex_handle);
+	if (geometry_file)
+		glAttachShader(program_handle, geometry_handle);
+	if (fragment_file)
+		glAttachShader(program_handle, fragment_handle);
+	prelink();
+	glLinkProgram(program_handle);
+	glGetProgramiv(program_handle, GL_LINK_STATUS, &success);
+	if (!success)
+	{
+		int		info_size;
+		char	*info_log;
+
+		glGetProgramiv(program_handle, GL_INFO_LOG_LENGTH, &info_size);
+		info_log = new char[info_size];
+
+		glGetProgramInfoLog(program_handle, info_size, NULL, info_log);
+		fprintf(fLog, "Error linking: %s", info_log);
+		fclose(fLog);
+		delete[] info_log;
+		return -1;
+	}
+
+	fprintf(fLog, "Link successful\n");
+	fclose(fLog);
+	return 0;
+}
+
+
 BOOL CViewPerspective::InitOpenGL()
 {
 	m_pDC = new CClientDC(this);
+
+
+	SetTimer(WM_STEP, 16, NULL);
 
 	if (m_pDC == NULL)
 		return FALSE;
@@ -111,7 +273,7 @@ BOOL CViewPerspective::InitOpenGL()
 		}
 		else
 		{
-			MessageBox(TEXT("Graphics Driver does not support OpenGL 4.4, update driver and/or GPU"), TEXT("Fatal Error"), 0);
+			//			MessageBox(TEXT("Graphics Driver does not support OpenGL 4.4, update driver and/or GPU"), TEXT("Fatal Error"), 0);
 			hglrc = hglrc_legacy;
 		}
 	}
@@ -121,13 +283,45 @@ BOOL CViewPerspective::InitOpenGL()
 		hglrc = hglrc_legacy;
 	}
 
+	CRect rect;
+	GetClientRect(&rect);
 
 	glClearColor(0.0f, 0.0f, 0.25f, 0.0f);
-	glClearDepth(1.0f);
+	glClearStencil(0);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_CULL_FACE);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_STENCIL_TEST);
 	glLineWidth(2.0f);
 	glPointSize(3.0f);
+	glColor3f(0.0f, 0.2f, 0.0f);
+	glViewport(0, 0, rect.right, rect.bottom);
+
+
+	load_shader("shader.vs", NULL, "shader.fs");
+
+
+	float points[] = {
+		-1.0f, -1.0f,  // first triangle
+		 1.0f, -1.0f,
+		-1.0f,  1.0f,
+		-1.0f,  1.0f,  // second triangle
+		 1.0f, -1.0f,
+		 1.0f,  1.0f
+	};
+	
+	glGenVertexArrays(1, &vao);
+	glGenBuffers(1, &points_vbo);
+
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), points, GL_STATIC_DRAW);
+
+	int aPosition = glGetAttribLocation(program_handle, "a_position");
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
 
 	return TRUE;
 }
@@ -137,13 +331,59 @@ BEGIN_MESSAGE_MAP(CViewPerspective, CView)
 	ON_WM_CREATE()
 	ON_WM_DESTROY()
 	ON_WM_ERASEBKGND()
+	ON_WM_SIZE()
+	ON_WM_TIMER()
+	ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 void CViewPerspective::OnDraw(CDC* pDC)
 {
-	SetContext();
-	glClear(GL_COLOR_BUFFER_BIT);
-	SwapGLBuffers();
+
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	glUseProgram(program_handle);
+	glBindVertexArray(vao);
+
+	// look up uniform locations
+	int resolutionLocation = glGetUniformLocation(program_handle, "iResolution");
+	int mouseLocation = glGetUniformLocation(program_handle, "iMouse");
+	int timeLocation = glGetUniformLocation(program_handle, "iTime");
+
+	// update uniforms
+	glUniform2f(resolutionLocation, (float)width, (float)height);
+	glUniform2f(mouseLocation, (float)mouse_x, (float)mouse_y);
+	glUniform1f(timeLocation, time);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	SwapBuffers(m_pDC->GetSafeHdc());
+}
+
+int CViewPerspective::prelink()
+{
+	// bind varying names
+
+	return 0;
+}
+
+
+void CViewPerspective::OnSize(UINT nType, int cx, int cy)
+{
+	glViewport(0, 0, cx, cy);
+
+	width = cx;
+	height = cy;
+}
+
+void CViewPerspective::OnMouseMove(UINT nFlags, CPoint point)
+{
+	mouse_x = point.x;
+	mouse_y = point.y;
+}
+
+
+void CViewPerspective::OnTimer(UINT_PTR TimerVal)
+{
+	time += 0.016f;
+	Invalidate(0);
 }
 
 #ifdef _DEBUG

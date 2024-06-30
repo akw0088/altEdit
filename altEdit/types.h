@@ -1,8 +1,5 @@
 #pragma once
 
-
-void draw_grid(CDC* pDC);
-
 #define GRID_SIZE 8
 #define GRID_OFFSET 25
 #define GRID_WIDTH 800
